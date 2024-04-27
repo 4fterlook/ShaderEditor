@@ -16,16 +16,6 @@ android {
 		vectorDrawables.useSupportLibrary true
 	}
 
-	signingConfigs {
-		release {
-			keyAlias System.getenv('ANDROID_KEY_ALIAS')
-			keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-			storePassword System.getenv('ANDROID_STORE_PASSWORD')
-			def filePath = System.getenv('ANDROID_KEYFILE')
-			storeFile filePath ? file(filePath) : null
-		}
-	}
-
 	buildTypes {
 		debug {
 			applicationIdSuffix '.debug'
@@ -34,7 +24,6 @@ android {
 		release {
 			minifyEnabled true
 			shrinkResources true
-			signingConfig signingConfigs.release
 		}
 	}
 
