@@ -18,6 +18,7 @@ import de.markusfisch.android.shadereditor.R;
 public class Preferences {
 	public static final String WALLPAPER_SHADER = "shader";
 	public static final String SAVE_BATTERY = "save_battery";
+	public static final String SORT_BY_LAST_MODIFICATION = "sort_by_last_modification";
 	public static final String RUN_MODE = "run_mode";
 	public static final String UPDATE_DELAY = "update_delay";
 	public static final String SENSOR_DELAY = "sensor_delay";
@@ -37,6 +38,9 @@ public class Preferences {
 	public static final String IMPORT_DATABASE = "import_database";
 	public static final String EXPORT_DATABASE = "export_database";
 	public static final String SHOW_LINE_NUMBERS = "show_line_numbers";
+	public static final String SHOW_EXTRA_KEYS = "show_extra_keys";
+	public static final String AUTO_HIDE_EXTRA_KEYS = "auto_hide_extra_keys";
+	public static final String HIDE_NATIVE_SUGGESTIONS = "hide_native_suggestions";
 
 	private static final int RUN_AUTO = 1;
 	private static final int RUN_MANUALLY = 2;
@@ -55,6 +59,7 @@ public class Preferences {
 	private SharedPreferences preferences;
 	private long wallpaperShaderId = 1;
 	private boolean saveBattery = true;
+	private boolean sortByLastModification = true;
 	private int runMode = RUN_AUTO;
 	private int updateDelay = 1000;
 	private int sensorDelay = SensorManager.SENSOR_DELAY_NORMAL;
@@ -73,6 +78,9 @@ public class Preferences {
 	private boolean disableHighlighting = false;
 	private boolean autoSave = true;
 	private boolean showLineNumbers = true;
+	private boolean showExtraKeys = true;
+	private boolean autoHideExtraKeys = true;
+	private boolean hideNativeSuggestions = true;
 	private String defaultFont;
 
 	public void init(Context context) {
@@ -104,6 +112,9 @@ public class Preferences {
 		saveBattery = preferences.getBoolean(
 				SAVE_BATTERY,
 				saveBattery);
+		sortByLastModification = preferences.getBoolean(
+				SORT_BY_LAST_MODIFICATION,
+				sortByLastModification);
 		runMode = parseInt(
 				preferences.getString(RUN_MODE, null),
 				runMode);
@@ -147,6 +158,23 @@ public class Preferences {
 		showLineNumbers = preferences.getBoolean(
 				SHOW_LINE_NUMBERS,
 				showLineNumbers);
+		showExtraKeys = preferences.getBoolean(
+				SHOW_EXTRA_KEYS,
+				showExtraKeys);
+		autoHideExtraKeys = preferences.getBoolean(
+				AUTO_HIDE_EXTRA_KEYS,
+				autoHideExtraKeys);
+		hideNativeSuggestions = preferences.getBoolean(
+				HIDE_NATIVE_SUGGESTIONS,
+				hideNativeSuggestions);
+	}
+
+	public boolean autoHideExtraKeys() {
+		return autoHideExtraKeys;
+	}
+
+	public boolean hideNativeSuggestions() {
+		return hideNativeSuggestions;
 	}
 
 	private @NonNull Typeface loadFont(
@@ -170,6 +198,10 @@ public class Preferences {
 
 	public boolean saveBattery() {
 		return saveBattery;
+	}
+
+	public boolean sortByLastModification() {
+		return sortByLastModification;
 	}
 
 	public boolean doesRunOnChange() {
@@ -275,6 +307,16 @@ public class Preferences {
 		return showLineNumbers;
 	}
 
+	public boolean showExtraKeys() {
+		return showExtraKeys;
+	}
+
+	public boolean toggleShowExtraKeys() {
+		showExtraKeys = !showExtraKeys;
+		preferences.edit().putBoolean(SHOW_EXTRA_KEYS, this.showExtraKeys).apply();
+		return showExtraKeys;
+	}
+
 	private void putString(String key, String value) {
 		SharedPreferences.Editor editor = preferences.edit();
 		editor.putString(key, value);
@@ -283,7 +325,7 @@ public class Preferences {
 
 	private static int parseInt(String s, int preset) {
 		try {
-			if (s != null && s.length() > 0) {
+			if (s != null && !s.isEmpty()) {
 				return Integer.parseInt(s);
 			}
 		} catch (NumberFormatException e) {
@@ -295,7 +337,7 @@ public class Preferences {
 
 	private static long parseLong(String s, long preset) {
 		try {
-			if (s != null && s.length() > 0) {
+			if (s != null && !s.isEmpty()) {
 				return Long.parseLong(s);
 			}
 		} catch (NumberFormatException e) {

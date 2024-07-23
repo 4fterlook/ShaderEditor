@@ -12,6 +12,7 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -21,9 +22,11 @@ import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
+import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.PopupWindow;
@@ -39,13 +42,20 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 
 import de.markusfisch.android.shadereditor.R;
+import de.markusfisch.android.shadereditor.adapter.CompletionsAdapter;
 import de.markusfisch.android.shadereditor.adapter.ShaderAdapter;
 import de.markusfisch.android.shadereditor.app.ShaderEditorApp;
 import de.markusfisch.android.shadereditor.database.Database;
@@ -60,7 +70,7 @@ import de.markusfisch.android.shadereditor.widget.TouchThruDrawerLayout;
 
 public class MainActivity
 		extends AppCompatActivity
-		implements ShaderEditor.OnTextChangedListener {
+		implements ShaderEditor.OnTextChangedListener, ShaderEditor.CodeCompletionListener {
 	private static final String SELECTED_SHADER = "selected_shader";
 	private static final String CODE_VISIBLE = "code_visible";
 	private static final int PREVIEW_SHADER = 1;
@@ -83,6 +93,7 @@ public class MainActivity
 	private PopupWindow menuPopup;
 	private TouchThruDrawerLayout drawerLayout;
 	private ActionBarDrawerToggle drawerToggle;
+	private View extraKeys;
 	private View menuFrame;
 	private ListView listView;
 	private ShaderAdapter shaderAdapter;
@@ -91,6 +102,7 @@ public class MainActivity
 	private volatile int fps;
 	private float[] qualityValues;
 	private float quality = 1f;
+	private CompletionsAdapter completionsAdapter;
 
 	@Override
 	public void onConfigurationChanged(@NonNull Configuration newConfig) {
@@ -123,6 +135,12 @@ public class MainActivity
 		}
 
 		setFragmentShader(text);
+	}
+
+	@Override
+	public void onCodeCompletions(@NonNull List<String> completions, int position) {
+		completionsAdapter.setPosition(position);
+		completionsAdapter.submitList(completions);
 	}
 
 	@Override
@@ -187,6 +205,7 @@ public class MainActivity
 		setContentView(R.layout.activity_main);
 
 		SystemBarMetrics.initSystemBars(this);
+		initExtraKeys();
 		initToolbar();
 		initQualitySpinner();
 		initDrawer();
@@ -274,6 +293,54 @@ public class MainActivity
 		}
 	}
 
+	private void initExtraKeys() {
+		extraKeys = findViewById(R.id.extra_keys);
+		extraKeys.findViewById(R.id.insert_tab).setOnClickListener((v) -> editorFragment.insert(
+				"\t"));
+		RecyclerView completions = extraKeys.findViewById(R.id.completions);
+		completions.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL,
+				false));
+		completionsAdapter = new CompletionsAdapter(this,
+				sequence -> editorFragment.insert(sequence));
+		completions.setAdapter(completionsAdapter);
+		DividerItemDecoration divider = new DividerItemDecoration(completions.getContext(),
+				DividerItemDecoration.HORIZONTAL);
+		divider.setDrawable(Objects.requireNonNull(ContextCompat.getDrawable(this,
+				R.drawable.divider_with_padding)));
+		completions.addItemDecoration(divider);
+		completions.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+			boolean isKeyboardShowing = false;
+
+			@Override
+			public void onGlobalLayout() {
+				boolean autoHide = ShaderEditorApp.preferences.autoHideExtraKeys();
+				Rect r = new Rect();
+				completions.getWindowVisibleDisplayFrame(r);
+				int screenHeight = completions.getRootView().getHeight();
+
+				// r.bottom is the position above soft keypad or device button.
+				// if keypad is shown, the r.bottom is smaller than that before.
+				int keypadHeight = screenHeight - r.bottom;
+
+				if (keypadHeight > screenHeight * 0.15) {
+					// 0.15 ratio is perhaps enough to determine keypad height.
+					isKeyboardShowing = true;
+					if (autoHide && ShaderEditorApp.preferences.showExtraKeys()) {
+						extraKeys.setVisibility(View.VISIBLE);
+					}
+				} else {
+					isKeyboardShowing = false;
+					if (autoHide) {
+						extraKeys.setVisibility(View.GONE);
+					}
+				}
+			}
+		});
+		extraKeys.setVisibility(ShaderEditorApp.preferences.showExtraKeys()
+				? View.VISIBLE
+				: View.GONE);
+	}
+
 	private void initToolbar() {
 		toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
@@ -282,7 +349,6 @@ public class MainActivity
 		setTooltipText(menuButton, R.string.menu_btn);
 		toolbar.findViewById(R.id.run_code).setOnClickListener((v) -> runShader());
 		toolbar.findViewById(R.id.toggle_code).setOnClickListener((v) -> toggleCode());
-		toolbar.findViewById(R.id.insert_tab).setOnClickListener((v) -> insertTab());
 		menuButton.setOnClickListener(this::showMenu);
 		menuPopup = new PopupBuilder(R.layout.main_menu)
 				.setClickListener(R.id.undo, (v, popup) -> {
@@ -305,7 +371,30 @@ public class MainActivity
 				.setClickListener(R.id.load_sample, this::loadSample)
 				.setClickListener(R.id.settings, this::showSettings)
 				.setClickListener(R.id.faq, this::showFaq)
+				.setClickListener(R.id.show_extra_keys_box, this::toggleExtraKeys, false)
 				.build();
+	}
+
+	private void toggleExtraKeys(@NonNull View view, @NonNull PopupWindow popupWindow) {
+		boolean visible = ShaderEditorApp.preferences.toggleShowExtraKeys();
+		updateExtraKeysToggle((CompoundButton) view, visible);
+		extraKeys.setVisibility(visible ? View.VISIBLE : View.GONE);
+	}
+
+	private void updateExtraKeysToggle(@NonNull CompoundButton extraKeysToggle, boolean visible) {
+		extraKeysToggle.setChecked(visible);
+		Drawable drawable = ContextCompat.getDrawable(this, visible ?
+				R.drawable.ic_bottom_panel_close : R.drawable.ic_bottom_panel_open);
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
+			Drawable[] drawables = extraKeysToggle.getCompoundDrawablesRelative();
+			extraKeysToggle.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, drawables[1]
+					, drawables[2],
+					drawables[3]);
+		} else {
+			Drawable[] drawables = extraKeysToggle.getCompoundDrawables();
+			extraKeysToggle.setCompoundDrawablesWithIntrinsicBounds(drawable, drawables[1],
+					drawables[2], drawables[3]);
+		}
 	}
 
 	private void updateUndoRedoMenu(@NonNull PopupWindow menuPopup) {
@@ -325,6 +414,8 @@ public class MainActivity
 						selectedShaderId
 						? R.string.update_wallpaper
 						: R.string.set_as_wallpaper);
+		updateExtraKeysToggle(menuView.findViewById(R.id.show_extra_keys_box),
+				ShaderEditorApp.preferences.showExtraKeys());
 	}
 
 	private void showMenu(View anchor) {
@@ -339,7 +430,8 @@ public class MainActivity
 
 			// Calculate the maximum allowed height (screen height - padding)
 			DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-			int padding = (int) (100 * displayMetrics.density); // You can adjust this padding value
+			int padding = (int) (100 * displayMetrics.density); // You can adjust this padding
+			// value
 			int maxHeight = screenHeight - padding;
 			int minHeight = (int) (48 * 3 * displayMetrics.density);
 
@@ -526,7 +618,7 @@ public class MainActivity
 		runCode.setVisibility(
 				!ShaderEditorApp.preferences.doesRunOnChange() ? View.VISIBLE : View.GONE);
 		setTooltipText(runCode, R.string.run_code);
-		View insertTab = toolbar.findViewById(R.id.insert_tab);
+		View insertTab = findViewById(R.id.insert_tab);
 		insertTab.setVisibility(
 				ShaderEditorApp.preferences.doesShowInsertTab() ? View.VISIBLE : View.GONE);
 		setTooltipText(insertTab, R.string.insert_tab);
@@ -536,6 +628,9 @@ public class MainActivity
 					ShaderEditorApp.preferences.showLineNumbers());
 			editorFragment.updateHighlighting();
 		}
+
+		extraKeys.setVisibility(ShaderEditorApp.preferences.showExtraKeys() ? View.VISIBLE :
+				View.GONE);
 
 		invalidateOptionsMenu();
 	}
@@ -558,7 +653,8 @@ public class MainActivity
 		}
 		Handler handler = new Handler(Looper.getMainLooper());
 		Executors.newSingleThreadExecutor().execute(() -> {
-			Cursor cursor = ShaderEditorApp.db.getShaders();
+			Cursor cursor = ShaderEditorApp.db.getShaders(
+					ShaderEditorApp.preferences.sortByLastModification());
 			handler.post(() -> updateShaderAdapter(cursor));
 		});
 	}
@@ -674,10 +770,6 @@ public class MainActivity
 		}
 	}
 
-	private void insertTab() {
-		editorFragment.insertTab();
-	}
-
 	private void runShader() {
 		String src = editorFragment.getText();
 		editorFragment.clearError();
@@ -729,6 +821,7 @@ public class MainActivity
 		if (editorFragment != null) {
 			boolean isVisible = editorFragment.toggleCode();
 			drawerLayout.setTouchThru(isVisible);
+			extraKeys.setVisibility(isVisible ? View.GONE : View.VISIBLE);
 		}
 	}
 
@@ -1133,6 +1226,8 @@ public class MainActivity
 			} else {
 				popupWindow.setElevation(6 * getResources().getDisplayMetrics().density);
 			}
+			// Do not effect the soft input - don't hide nor show
+			popupWindow.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
 			return popupWindow;
 		}
 	}

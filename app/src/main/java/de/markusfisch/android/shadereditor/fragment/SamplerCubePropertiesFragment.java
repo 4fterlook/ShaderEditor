@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import de.markusfisch.android.shadereditor.R;
@@ -35,10 +36,13 @@ public class SamplerCubePropertiesFragment extends AbstractSamplerPropertiesFrag
 
 	@Override
 	public View onCreateView(
-			LayoutInflater inflater,
+			@NonNull LayoutInflater inflater,
 			ViewGroup container,
 			Bundle state) {
 		Activity activity = getActivity();
+		if (activity == null) {
+			return null;
+		}
 		activity.setTitle(R.string.texture_properties);
 
 		Bundle args;
@@ -95,12 +99,12 @@ public class SamplerCubePropertiesFragment extends AbstractSamplerPropertiesFrag
 
 			if (bitmap == null ||
 					(bitmap = BitmapEditor.crop(
-							bitmap, clip, rotation)) == null ||
-					(bitmap = Bitmap.createScaledBitmap(
-							bitmap, size, size, true)) == null) {
+							bitmap, clip, rotation)) == null) {
 				return R.string.cannot_pick_image;
 			}
 
+			bitmap = Bitmap.createScaledBitmap(
+					bitmap, size, size, true);
 			canvas.drawBitmap(bitmap, x, y, null);
 			bitmap.recycle();
 

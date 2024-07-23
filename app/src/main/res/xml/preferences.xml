@@ -15,6 +15,12 @@
 			android:defaultValue="true"/>
 	</PreferenceCategory>
 	<PreferenceCategory android:title="@string/editor">
+		<androidx.preference.SwitchPreferenceCompat
+			android:key="sort_by_last_modification"
+			android:title="@string/sort_by_last_modification"
+			android:summary="@string/sort_by_last_modification_summary"
+			android:checked="true"
+			android:defaultValue="true"/>
 		<ListPreference
 			android:key="run_mode"
 			android:title="@string/run_mode"
@@ -91,6 +97,18 @@
 			android:title="@string/auto_save"
 			android:summary="@string/auto_save_summary"
 			android:checked="false"
+			android:defaultValue="true"/>
+		<androidx.preference.SwitchPreferenceCompat
+			android:key="auto_hide_extra_keys"
+			android:title="@string/auto_hide_extra_keys"
+			android:summary="@string/auto_hide_extra_keys_summary"
+			android:checked="true"
+			android:defaultValue="true"/>
+		<androidx.preference.SwitchPreferenceCompat
+			android:key="hide_native_suggestions"
+			android:title="@string/hide_native_suggestions"
+			android:summary="@string/hide_native_suggestions_summary"
+			android:checked="true"
 			android:defaultValue="true"/>
 		<de.markusfisch.android.shadereditor.preference.ShaderListPreference
 			android:key="default_new_shader"

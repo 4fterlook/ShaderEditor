@@ -1,5 +1,18 @@
 # Change Log
 
+## 2.34.2
+* Add a setting to hide native suggestions of the soft keyboard
+* Add Ukrainian translation
+
+## 2.34.1
+* Use bracket characters as default completions
+* Improve auto-completion
+
+## 2.34.0
+* Add a suggestion bar with auto-completions over the keyboard
+* Add option to sort shaders by last modification
+* Fix showing PagerTabStrip when adding uniforms/textures
+
 ## 2.33.3
 * Add notification uniforms
 

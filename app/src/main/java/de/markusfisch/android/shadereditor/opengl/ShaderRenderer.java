@@ -371,7 +371,7 @@ public class ShaderRenderer implements GLSurfaceView.Renderer {
 			deleteTargets();
 		}
 
-		if (fragmentShader != null && fragmentShader.length() > 0) {
+		if (fragmentShader != null && !fragmentShader.isEmpty()) {
 			resetFps();
 			createTextures();
 			loadPrograms();
@@ -1030,13 +1030,9 @@ public class ShaderRenderer implements GLSurfaceView.Renderer {
 		if (deviceRotation != 0) {
 			int x = SensorManager.AXIS_Y;
 			int y = SensorManager.AXIS_MINUS_X;
-			switch (deviceRotation) {
-				default:
-					break;
-				case 270:
-					x = SensorManager.AXIS_MINUS_Y;
-					y = SensorManager.AXIS_X;
-					break;
+			if (deviceRotation == 270) {
+				x = SensorManager.AXIS_MINUS_Y;
+				y = SensorManager.AXIS_X;
 			}
 			SensorManager.remapCoordinateSystem(
 					rotationMatrix,

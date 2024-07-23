@@ -12,7 +12,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
@@ -33,7 +32,6 @@ public class UniformSampler2dPageFragment extends Fragment {
 
 	private ListView listView;
 	private TextureAdapter texturesAdapter;
-	private EditText searchBar;
 	private View progressBar;
 	private View noTexturesMessage;
 	private String samplerType = AbstractSamplerPropertiesFragment.SAMPLER_2D;
@@ -87,7 +85,7 @@ public class UniformSampler2dPageFragment extends Fragment {
 	}
 
 	@Override
-	public void onCreateOptionsMenu(@NonNull Menu menu, MenuInflater inflater) {
+	public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
 		SearchMenu.addSearchMenu(menu, inflater, this::filterTextures);
 	}
 

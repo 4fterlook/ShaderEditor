@@ -5,14 +5,12 @@ import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import de.markusfisch.android.shadereditor.R;
@@ -29,7 +27,6 @@ public class EditorFragment extends Fragment {
 	private View editorContainer;
 	private ShaderEditor shaderEditor;
 	private UndoRedo undoRedo;
-	private int yOffset;
 
 	@Override
 	public View onCreateView(
@@ -50,6 +47,8 @@ public class EditorFragment extends Fragment {
 		if (activity instanceof ShaderEditor.OnTextChangedListener) {
 			shaderEditor.setOnTextChangedListener(
 					(ShaderEditor.OnTextChangedListener) activity);
+			shaderEditor.setOnCompletionsListener(
+					(ShaderEditor.CodeCompletionListener) activity);
 		} else {
 			throw new ClassCastException(activity +
 					" must implement " +
@@ -116,15 +115,10 @@ public class EditorFragment extends Fragment {
 		shaderEditor.setErrorLine(InfoLog.getErrorLine());
 		highlightError();
 
-		Toast errorToast = Toast.makeText(
+		Toast.makeText(
 				activity,
 				InfoLog.getMessage(),
-				Toast.LENGTH_SHORT);
-		errorToast.setGravity(
-				Gravity.TOP | Gravity.CENTER_HORIZONTAL,
-				0,
-				getYOffset(activity));
-		errorToast.show();
+				Toast.LENGTH_SHORT).show();
 	}
 
 	public boolean isModified() {
@@ -143,8 +137,8 @@ public class EditorFragment extends Fragment {
 		undoRedo.listenForChanges();
 	}
 
-	public void insertTab() {
-		shaderEditor.insertTab();
+	public void insert(@NonNull CharSequence text) {
+		shaderEditor.insert(text);
 	}
 
 	public void addUniform(String name) {
@@ -183,27 +177,6 @@ public class EditorFragment extends Fragment {
 						: preferences.useLigatures() ? "normal" : "calt off");
 			}
 		}
-	}
-
-	private int getYOffset(Activity activity) {
-		if (yOffset == 0) {
-			float dp = getResources().getDisplayMetrics().density;
-
-			if (activity instanceof AppCompatActivity) {
-				ActionBar actionBar = ((AppCompatActivity) activity)
-						.getSupportActionBar();
-
-				if (actionBar != null) {
-					yOffset = actionBar.getHeight();
-				}
-			} else {
-				yOffset = Math.round(48f * dp);
-			}
-
-			yOffset += Math.round(16f * dp);
-		}
-
-		return yOffset;
 	}
 
 	public void setShowLineNumbers(boolean showLineNumbers) {
